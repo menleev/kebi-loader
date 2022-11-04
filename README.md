@@ -5,3 +5,5 @@
 2. Закинуть её в любую папку
 3. Запустить
 4. Ожидать завершения
+
+![my_1gif](https://user-images.githubusercontent.com/110269230/200058739-70ff478e-d6e8-4aea-98aa-55b88b260bdc.gif)
