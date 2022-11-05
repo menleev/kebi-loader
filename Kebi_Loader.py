@@ -115,6 +115,8 @@ def get_last_version_kebi():
 
 #функция для обновления akebi и kebi
 def update_all():
+    os.chdir('akebi')
+
     ch_a = check_version_akebi()
     if ch_a == 'akebi':
         update_akebi()
@@ -142,6 +144,7 @@ def check_version_kebi():
 
 #функция для обновления akebi
 def update_kebi():
+    os.chdir('akebi')
     latest_version = get_last_version_kebi()
     subprocess.call(['curl', '-L', latest_version, '-o', 'Kebi_Loader_new.exe'])
 
@@ -157,12 +160,8 @@ def update_kebi():
 
 #функция для обновления kebi
 def update_akebi():
+    os.chdir('akebi')
     latest_version = get_last_version()
-
-    if os.path.exists('injector.exe') and os.path.exists('CLibrary.dll'):
-        os.remove('injector.exe')
-        os.remove('CLibrary.dll')
-
     subprocess.call(['curl', '-L', latest_version, '-o', 'akebi.zip'])
 
     with ZipFile('akebi.zip', 'r') as zipObj:
@@ -212,6 +211,8 @@ def inject_starting(injector):
 
 #функция для запуска игры
 def injector_start():
+    os.chdir('akebi')
+    
     injector = None
     inject_starting(injector)
     try:
