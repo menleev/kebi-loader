@@ -2,6 +2,7 @@ import json
 import os
 import shutil
 import subprocess
+import time
 import zipfile
 import psutil
 from zipfile import ZipFile
@@ -18,20 +19,44 @@ def menu():
     print('\033[32m''Впишите цифру от пункта:''\033[0m')
     choice = input()
     if choice == '0':
-        winv()
-        menu()
+        if winv() == True:
+            print('Папка с конфигами и скаченной версией Akebi-GC создана')
+            time.sleep(3)
+            menu()
+        else:
+            print('Ошибка')
+            time.sleep(3)
+            menu()
         
     if choice == '1':
-        update_akebi()
-        menu()
+        if update_akebi() == True:
+            print('Akebi-GC обновлен')
+            time.sleep(3)
+            menu()
+        else:
+            print('Ошибка')
+            time.sleep(3)
+            menu()
 
     elif choice == '2':
-        update_kebi()
-        menu()
+        if update_kebi() == True:
+            print('Kebi-Loader обновлен')
+            time.sleep(3)
+            menu()
+        else:
+            print('Ошибка')
+            time.sleep(3)
+            menu()
 
     elif choice == '3':
-        update_all()
-        menu()
+        if update_kebi() == True:
+            print('Всё обновлено')
+            time.sleep(3)
+            menu()
+        else:
+            print('Ошибка')
+            time.sleep(3)
+            menu()
 
     #если нажат enter
     elif choice == '':
@@ -110,122 +135,81 @@ def update_all():
 def update_kebi():
     try:
         latest_version = get_last_version_kebi()
-        subprocess.call(['curl', '-L', latest_version, '-o', 'Kebi_Loader_new.exe'])
-        if folder_find() == None:
+        if get_data('akebi') == None:
+            subprocess.call(['curl', '-L', latest_version, '-o', 'Kebi_Loader_new.exe'])
             os.system('cls')
             return False
-
-        shutil.move('Kebi_Loader_new.exe', folder_find() + '\\Kebi_Loader.exe')
-
-        os.system('cls')
-        return True
+        else:
+            subprocess.call(['curl', '-L', latest_version, '-o', get_data('akebi') + '\\Kebi_Loader_new.exe'])
+            os.system('cls')
+            return True
     except FileNotFoundError:
+       return False
+    except TypeError:
+        return False
+    except PermissionError:
         return False
 
 #функция для обновления kebi
 def update_akebi():
     try:
         latest_version = get_last_version()
-        if folder_find() == None:
+        if get_data('akebi') == None:
             subprocess.call(['curl', '-L', latest_version, '-o', 'akebi.zip'])
-            #распаковка архива
             with zipfile.ZipFile('akebi.zip', 'r') as zip_ref:
                 zip_ref.extractall()
             os.remove('akebi.zip')
-            return False
-        else:
-            subprocess.call(['curl', '-L', latest_version, '-o', folder_find() + '\\akebi.zip'])
-            with ZipFile(folder_find() + '\\akebi.zip', 'r') as zipObj:
-                zipObj.extractall(folder_find())
-            os.remove(folder_find()+'\\akebi.zip')
             os.system('cls')
+            return False
+
+        else:
+            subprocess.call(['curl', '-L', latest_version, '-o', get_data('akebi') + '\\akebi.zip'])
+            with zipfile.ZipFile(get_data('akebi')) as zip_ref:
+                zip_ref.extractall()
+            os.remove(get_data('akebi'))
             return True
     except FileNotFoundError:
-        os.system('cls')
+       return False
+    except TypeError:
+        return False
+    except PermissionError:
         return False
 
-#функция для поиска пути к папке с akebi
-def folder_find():
+#поиск
+def get_data(data):
     try:
-        for disk in psutil.disk_partitions():
-            for root, dirs, files in os.walk(disk.mountpoint):
-                if 'Recycle.Bin' not in root:
-                    if 'update_cfg_kebi.json' in files:
-                        fol_f = root
-                        return fol_f
+        for korneplod in os.listdir(os.getcwd()):
+            if data in korneplod:
+                injector_path = os.path.abspath(korneplod)
+                return injector_path
+        else:
+            for disk in psutil.disk_partitions():
+                for root, dirs, files in os.walk(disk.mountpoint):
+                    if 'Recycle.Bin' not in root:
+                        if 'update_cfg_kebi.json' in files:
+                            return root
     except FileNotFoundError:
        return False
     except TypeError:
         return False
-
-#функция для поиска пути к update_cfg_kebi.json
-def cfg_find():
-    try:
-        for disk in psutil.disk_partitions():
-            for root, dirs, files in os.walk(disk.mountpoint):
-                if 'Recycle.Bin' not in root:
-                    if 'update_cfg_kebi.json' in files:
-                        cfg_k = root
-                        return cfg_k + '\\update_cfg_kebi.json'
-    except FileNotFoundError:
-       return False
-    except TypeError:
+    except PermissionError:
         return False
-
-#поиск injector
-def inj_find():
-    try:
-        for disk in psutil.disk_partitions():
-            for root, dirs, files in os.walk(disk.mountpoint):
-                if 'Recycle.Bin' not in root:
-                    if 'update_cfg_kebi.json' in files:
-                        cfg_f = root
-                        return cfg_f + '\injector.exe'
-    except FileNotFoundError:
-       return False
-
-#поиск cfg.ini
-def ini_find():
-    try:
-        for disk in psutil.disk_partitions():
-            for root, dirs, files in os.walk(disk.mountpoint):
-                if 'Recycle.Bin' not in root:
-                    if 'update_cfg_kebi.json' in files:
-                        for inject, dirs, files in os.walk(root):
-                            if 'cfg.ini' in files:
-                                cfg_i = inject + '\cfg.ini'
-                                return cfg_i
-    except FileNotFoundError:
-       return False
 
 #функция для запуска игры
 def injector_start():
     try:
-        inj_f = inj_find()
-        if inj_f == None:
-            print('Инжектор не найден')
+        if get_data('injector.exe') == None:
+            print('Не найден cfg.ini и update_cfg_kebi.json')
             return False
-
-        ini_f = ini_find()
-        if ini_f == None:
-            print('cfg.ini не найден')
-            return False
-        subprocess.Popen([inj_f, ini_f], creationflags=subprocess.CREATE_NEW_CONSOLE)
-        os.system('cls')
-        return True
-    except TypeError:
-        os.system('cls')
-        return False
-    except UnboundLocalError:
-       os.system('cls')
-       return False
-    except PermissionError:
-        os.system('cls')
-        return False
+        else:
+            subprocess.Popen(get_data('injector.exe') + '\\injector.exe', creationflags=subprocess.CREATE_NEW_CONSOLE)
+            os.system('cls')
+            return True
     except FileNotFoundError:
-        os.system('cls')
+       return False
+    except TypeError:
         return False
-
-
+    except PermissionError:
+        return False
 if __name__ == '__main__':
     menu()
