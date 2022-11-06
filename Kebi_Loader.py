@@ -1,86 +1,28 @@
 import json
+import multiprocessing
 import os
-import shutil
 import subprocess
+import sys
 import time
 import zipfile
 import psutil
-from zipfile import ZipFile
 
-def menu():
-    
-    os.system('cls')
-    print('ЧТОБЫ ЗАПУСТИТЬ ЧИТ НАЖМИТЕ ENTER НИЧЕГО НЕ ВВОДЯ\n')
-    
-    print('0.' '\033[31m ' 'Создает папку с конфигами и скаченной версией Akebi-GC''\033[0m')
-    print('1. Обновить' '\033[35m ' 'Akebi-GC''\033[0m')
-    print('2. Обновить ' '\033[36m' 'Kebi-Loader''\033[0m')
-    print('3. Обновить ' '\033[31m' 'Оба файла ''\033[0m')
-    print('\033[32m''Впишите цифру от пункта:''\033[0m')
-    choice = input()
-    if choice == '0':
-        if winv() == True:
-            print('Папка с конфигами и скаченной версией Akebi-GC создана')
-            time.sleep(3)
-            menu()
-        else:
-            print('Ошибка')
-            time.sleep(3)
-            menu()
-        
-    if choice == '1':
-        if update_akebi() == True:
-            print('Akebi-GC обновлен')
-            time.sleep(3)
-            menu()
-        else:
-            print('Ошибка')
-            time.sleep(3)
-            menu()
+cfg_winde = None
 
-    elif choice == '2':
-        if update_kebi() == True:
-            print('Kebi-Loader обновлен')
-            time.sleep(3)
-            menu()
-        else:
-            print('Ошибка')
-            time.sleep(3)
-            menu()
-
-    elif choice == '3':
-        if update_kebi() == True:
-            print('Всё обновлено')
-            time.sleep(3)
-            menu()
-        else:
-            print('Ошибка')
-            time.sleep(3)
-            menu()
-
-    #если нажат enter
-    elif choice == '':
-        injector_start()
-        menu()
-
-#функция для проверки наличия папки akebi и backup
 def winv():
-    if os.path.basename(os.getcwd()) != 'akebi':
-        if not os.path.exists('akebi'):
-            os.mkdir('akebi')
-        os.chdir('akebi')
-
-    if not os.path.exists('backup'):
-        os.mkdir('backup')
-    
     create_cfg()
     create_ini()
-    update_akebi()
     update_kebi()
-    return True
+    update_akebi()
+    print('[o] Всё готово, приятной игры!\n')
+    for i in range(5, 0, -1):
+        sys.stdout.write('\r' + str(i))
+        time.sleep(1)
+    sys.exit()
 
 #функция для проверки новой версии и обновления
 def create_cfg():
+    print('[o] Проверка наличия файла конфигурации\n')
     if not os.path.exists('update_cfg_kebi.json'):
         with open('update_cfg_kebi.json', 'w') as f:
             f.write(json.dumps({'akebi': get_last_version(), 'kebi': get_last_version_kebi(), 'injector': 'C:\\'}, indent=4))
@@ -90,23 +32,23 @@ def create_cfg():
         with open('update_cfg_kebi.json', 'w') as f:
             f.write(json.dumps({'akebi': get_last_version(), 'kebi': get_last_version_kebi(), 'injector': 'C:\\'}, indent=4))
             f.close()
-    
+    global cfg_winde
+    cfg_winde = os.path.abspath(os.path.join('update_cfg_kebi.json', os.pardir))
+    print('[o] Файл конфигурации найден\n')
     return True
 
 #функция для создания ini файла с указанием пути к игре для акеби
 def create_ini():
-    with open('cfg.ini', 'w') as f:
-        f.write('[Inject]\n')
-        f.write('GenshinPath = ' + find_genshin() + '\GenshinImpact.exe')
-        
-    return True
-        
-#функция для поиска пути к игре
-def find_genshin():
-    for disk in psutil.disk_partitions():
-        for root, dirs, files in os.walk(disk.mountpoint):
-            if 'GenshinImpact.exe' in files:
-                return root
+    print('[o] Проверка наличия файла cfg.ini\n')
+    if not os.path.exists('cfg.ini'):
+        with open('cfg.ini', 'w') as f:
+            f.write('[Inject]\n')
+            f.write('GenshinPath = ' + get_data('GenshinImpact.exe') + '\GenshinImpact.exe')
+            f.close()
+            return True
+    else:
+        print('[o] Файл cfg.ini найден\n')
+        return True
 
 #функция для получения последней версии akebi
 def get_last_version():
@@ -124,25 +66,46 @@ def get_last_version_kebi():
         if 'global' in asset['name']:
             return asset['browser_download_url']
 
-#функция для обновления akebi и kebi
-def update_all():
-    update_akebi()
-    update_kebi()
-    os.system('cls')
-    return True
-
 #функция для обновления akebi
 def update_kebi():
     try:
-        latest_version = get_last_version_kebi()
-        if get_data('akebi') == None:
-            subprocess.call(['curl', '-L', latest_version, '-o', 'Kebi_Loader_new.exe'])
-            os.system('cls')
-            return False
+        kebi_latest_version = get_last_version_kebi()
+        if cfg_winde == None:
+            if get_data('akebi') == None:
+                subprocess.call(['curl', '-L', kebi_latest_version, '-o', 'Kebi_Loader.exe'])
+                os.system('cls')
+                return False
         else:
-            subprocess.call(['curl', '-L', latest_version, '-o', get_data('akebi') + '\\Kebi_Loader_new.exe'])
-            os.system('cls')
-            return True
+            print('[o] Проверка наличия актуальной версии kebi\n')
+            with open(cfg_winde + '\\update_cfg_kebi.json', 'r') as f:
+                data = json.load(f)
+                f.close()
+            print('[o] Проверка наличия актуальной версии kebi завершена\n')
+            kebi_version = data['kebi']
+            if kebi_version != kebi_latest_version:
+                print('[o] Обновление kebi найдено приступаю к обновлению\n')
+                if os.path.exists('Kebi_Loader.exe'):
+                    i = 1
+                    while os.path.exists('Kebi_Loader' + str(i) + '.exe'):
+                        i += 1
+                    subprocess.call(['curl', '-L', kebi_latest_version, '-o', 'Kebi_Loader' + str(i) + '.exe'])
+                    data['kebi'] = kebi_latest_version
+                    with open(cfg_winde + '\\update_cfg_kebi.json', 'w') as f:
+                        json.dump(data, f, indent=4)
+                        f.close()
+                        print('[o] Обновление kebi завершено\n')
+                        return True
+                else:
+                    subprocess.call(['curl', '-L', kebi_latest_version, '-o', cfg_winde + '\\Kebi_Loader.exe'])
+                    data['kebi'] = kebi_latest_version
+                    with open(cfg_winde + '\\update_cfg_kebi.json', 'w') as f:
+                        json.dump(data, f, indent=4)
+                        f.close()
+                        print('[o] Обновление kebi завершено\n')
+                        return True
+            else:
+                print('[o] Обновление kebi не найдено\n')
+                return False
     except FileNotFoundError:
        return False
     except TypeError:
@@ -154,20 +117,47 @@ def update_kebi():
 def update_akebi():
     try:
         latest_version = get_last_version()
-        if get_data('akebi') == None:
-            subprocess.call(['curl', '-L', latest_version, '-o', 'akebi.zip'])
-            with zipfile.ZipFile('akebi.zip', 'r') as zip_ref:
-                zip_ref.extractall()
-            os.remove('akebi.zip')
-            os.system('cls')
-            return False
-
+        if cfg_winde == None:
+            if get_data('akebi') == None:
+                subprocess.call(['curl', '-L', latest_version, '-o', 'akebi.zip'])
+                with zipfile.ZipFile('akebi.zip', 'r') as zip_ref:
+                    zip_ref.extractall()
+                os.remove('akebi.zip')
+                os.system('cls')
+                return False
         else:
-            subprocess.call(['curl', '-L', latest_version, '-o', get_data('akebi') + '\\akebi.zip'])
-            with zipfile.ZipFile(get_data('akebi')) as zip_ref:
-                zip_ref.extractall()
-            os.remove(get_data('akebi'))
-            return True
+            print('[o] Проверка наличия файлов akebi\n')
+            if not os.path.exists(cfg_winde + '\\CLibrary.dll') or not os.path.exists(cfg_winde + '\\injector.exe'):
+                print('[o] Файлы akebi не найдены приступаю к загрузке\n')
+                subprocess.call(['curl', '-L', latest_version, '-o', cfg_winde + '\\akebi.zip'])
+                with zipfile.ZipFile(cfg_winde + '\\akebi.zip', 'r') as zip_ref:
+                    zip_ref.extractall(cfg_winde)
+                os.remove(cfg_winde + '\\akebi.zip')
+                print('[o] Файлы akebi загружены\n')
+                return True
+            else:
+                print('[o] Файлы akebi найдены\n')
+                with open(cfg_winde + '\\update_cfg_kebi.json', 'r') as f:
+                    data = json.load(f)
+                    f.close()
+                print('[o] Проверка наличия актуальной версии akebi\n')
+                akebi_version = data['akebi']
+                if akebi_version != latest_version:
+                    print('[o] Обновление akebi найдено приступаю к обновлению\n')
+                    subprocess.call(['curl', '-L', latest_version, '-o', cfg_winde + '\\akebi.zip'])
+                    os.remove(cfg_winde + '\\CLibrary.dll') and os.remove(cfg_winde + '\\injector.exe')
+                    with zipfile.ZipFile(cfg_winde + '\\akebi.zip', 'r') as zip_ref:
+                        zip_ref.extractall(cfg_winde)
+                    os.remove(cfg_winde + '\\akebi.zip')
+                    data['akebi'] = latest_version
+                    with open(cfg_winde + '\\update_cfg_kebi.json', 'w') as f:
+                        json.dump(data, f, indent=4)
+                        f.close()
+                        print('[o] Обновление akebi завершено\n')
+                        return True
+                else:
+                    print('[o] Обновление akebi не найдено\n')
+                    return False
     except FileNotFoundError:
        return False
     except TypeError:
@@ -175,41 +165,24 @@ def update_akebi():
     except PermissionError:
         return False
 
-#поиск
 def get_data(data):
-    try:
-        for korneplod in os.listdir(os.getcwd()):
-            if data in korneplod:
-                injector_path = os.path.abspath(korneplod)
-                return injector_path
-        else:
-            for disk in psutil.disk_partitions():
-                for root, dirs, files in os.walk(disk.mountpoint):
-                    if 'Recycle.Bin' not in root:
-                        if 'update_cfg_kebi.json' in files:
-                            return root
-    except FileNotFoundError:
-       return False
-    except TypeError:
-        return False
-    except PermissionError:
-        return False
+    disk_count = len(psutil.disk_partitions())
+    for i in range(disk_count):
+        p = multiprocessing.Process(target=find, args=(i, data))
+        p.start()
+        p.join()
+        return find(i, data)
 
-#функция для запуска игры
-def injector_start():
-    try:
-        if get_data('injector.exe') == None:
-            print('Не найден cfg.ini и update_cfg_kebi.json')
-            return False
-        else:
-            subprocess.Popen(get_data('injector.exe') + '\\injector.exe', creationflags=subprocess.CREATE_NEW_CONSOLE)
-            os.system('cls')
-            return True
-    except FileNotFoundError:
-       return False
-    except TypeError:
-        return False
-    except PermissionError:
-        return False
+
+def find(i, data):
+    disk = psutil.disk_partitions()[i]
+    path = disk.mountpoint
+    for root, dirs, files in os.walk(path):
+        if data in files:
+            data = root
+            return data
+
+                
+
 if __name__ == '__main__':
-    menu()
+    winv()
