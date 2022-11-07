@@ -14,10 +14,8 @@ def winv():
     create_ini()
     update_kebi()
     update_akebi()
+    download_teleport()
     print('[o] Всё готово, приятной игры!\n')
-    for i in range(5, 0, -1):
-        sys.stdout.write('\r' + str(i))
-        time.sleep(1)
     sys.exit()
 
 #функция для проверки новой версии и обновления
@@ -41,11 +39,13 @@ def create_cfg():
 def create_ini():
     print('[o] Проверка наличия файла cfg.ini\n')
     if not os.path.exists('cfg.ini'):
+        #создание ini файла
         with open('cfg.ini', 'w') as f:
             f.write('[Inject]\n')
             f.write('GenshinPath = ' + get_data('GenshinImpact.exe') + '\GenshinImpact.exe')
             f.close()
-            return True
+        print('[o] Файл cfg.ini найден\n')
+        return True
     else:
         print('[o] Файл cfg.ini найден\n')
         return True
@@ -84,6 +84,7 @@ def update_kebi():
             kebi_version = data['kebi']
             if kebi_version != kebi_latest_version:
                 print('[o] Обновление kebi найдено приступаю к обновлению\n')
+                #если есть файл с названием Kebi_Loader.exe то прибавляем к новому +1 и так до тех пор пока не будет уникального названия
                 if os.path.exists('Kebi_Loader.exe'):
                     i = 1
                     while os.path.exists('Kebi_Loader' + str(i) + '.exe'):
@@ -164,6 +165,13 @@ def update_akebi():
         return False
     except PermissionError:
         return False
+
+def download_teleport():
+    subprocess.call(['curl', '-L', 'https://github.com/menleev/kebi-loader/raw/main/Good%20Teleport.zip', '-o', cfg_winde + '\\GoodTeleport.zip'])
+    with zipfile.ZipFile(cfg_winde + '\\GoodTeleport.zip', 'r') as zip_ref:
+        zip_ref.extractall(cfg_winde)
+    os.remove(cfg_winde + '\\GoodTeleport.zip')
+    return True
 
 def get_data(data):
     disk_count = len(psutil.disk_partitions())
