@@ -84,7 +84,6 @@ def update_kebi():
             kebi_version = data['kebi']
             if kebi_version != kebi_latest_version:
                 print('[o] Обновление kebi найдено приступаю к обновлению\n')
-                #если есть файл с названием Kebi_Loader.exe то прибавляем к новому +1 и так до тех пор пока не будет уникального названия
                 if os.path.exists('Kebi_Loader.exe'):
                     i = 1
                     while os.path.exists('Kebi_Loader' + str(i) + '.exe'):
