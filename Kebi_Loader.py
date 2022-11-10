@@ -1,5 +1,7 @@
 import json
 import multiprocessing
+import threading
+import win32api
 import os
 import subprocess
 import sys
@@ -38,11 +40,12 @@ def create_cfg():
 #функция для создания ini файла с указанием пути к игре для акеби
 def create_ini():
     print('[o] Проверка наличия файла cfg.ini\n')
+    start('GenshinImpact.exe')
     if not os.path.exists('cfg.ini'):
         #создание ini файла
         with open('cfg.ini', 'w') as f:
             f.write('[Inject]\n')
-            f.write('GenshinPath = ' + get_data('GenshinImpact.exe') + '\GenshinImpact.exe')
+            f.write('GenshinPath = ' + game_patch + '\GenshinImpact.exe')
             f.close()
         print('[o] Файл cfg.ini найден\n')
         return True
@@ -71,7 +74,8 @@ def update_kebi():
     try:
         kebi_latest_version = get_last_version_kebi()
         if cfg_winde == None:
-            if get_data('akebi') == None:
+            start('akebi')
+            if game_patch == None:
                 subprocess.call(['curl', '-L', kebi_latest_version, '-o', 'Kebi_Loader.exe'])
                 os.system('cls')
                 return False
@@ -118,7 +122,8 @@ def update_akebi():
     try:
         latest_version = get_last_version()
         if cfg_winde == None:
-            if get_data('akebi') == None:
+            start('akebi')
+            if game_patch == None:
                 subprocess.call(['curl', '-L', latest_version, '-o', 'akebi.zip'])
                 with zipfile.ZipFile('akebi.zip', 'r') as zip_ref:
                     zip_ref.extractall()
@@ -172,24 +177,28 @@ def download_teleport():
     os.remove(cfg_winde + '\\GoodTeleport.zip')
     return True
 
-def get_data(data):
-    disk_count = len(psutil.disk_partitions())
-    for i in range(disk_count):
-        p = multiprocessing.Process(target=find, args=(i, data))
-        p.start()
-        p.join()
-        return find(i, data)
+#функция которая создает потоки для вызова функций поиска
+def start(game):
+    disked = psutil.disk_partitions()
+    th = []
+    for disk in disked:
+        t = threading.Thread(target=game_data, args=(disk, game))
+        t.start()
+        th.append(t)
+    for t in th:
+        t.join()
+    return True
 
+game_patch = None
 
-def find(i, data):
-    disk = psutil.disk_partitions()[i]
-    path = disk.mountpoint
-    for root, dirs, files in os.walk(path):
-        if data in files:
-            data = root
-            return data
-
-                
+def game_data(disk, game):
+    start_time = time.time()
+    print('[o] Поиск игры на диске ' + disk.device)
+    for root, dirs, files in os.walk(disk.mountpoint):
+        if game in files:
+            global game_patch
+            game_patch = root
+            return True
 
 if __name__ == '__main__':
     winv()
