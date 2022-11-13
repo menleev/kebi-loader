@@ -1,13 +1,10 @@
 import json
-import multiprocessing
-import threading
-import win32api
+import concurrent.futures
+import psutil
 import os
 import subprocess
 import sys
-import time
 import zipfile
-import psutil
 
 cfg_winde = None
 
@@ -45,7 +42,7 @@ def create_ini():
         #создание ini файла
         with open('cfg.ini', 'w') as f:
             f.write('[Inject]\n')
-            f.write('GenshinPath = ' + game_patch + '\GenshinImpact.exe')
+            f.write('GenshinPath = ' + game_patch)
             f.close()
         print('[o] Файл cfg.ini найден\n')
         return True
@@ -177,28 +174,25 @@ def download_teleport():
     os.remove(cfg_winde + '\\GoodTeleport.zip')
     return True
 
-#функция которая создает потоки для вызова функций поиска
 def start(game):
     disked = psutil.disk_partitions()
-    th = []
-    for disk in disked:
-        t = threading.Thread(target=game_data, args=(disk, game))
-        t.start()
-        th.append(t)
-    for t in th:
-        t.join()
-    return True
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        for disk in disked:
+            executor.submit(search, disk.mountpoint, game)
+    return
 
 game_patch = None
 
-def game_data(disk, game):
-    start_time = time.time()
-    print('[o] Поиск игры на диске ' + disk.device)
-    for root, dirs, files in os.walk(disk.mountpoint):
+def search(path, game):
+    global game_patch
+    for root, dirs, files in os.walk(path):
+        if 'Windows' in root or 'Recycle.Bin' in root:
+            continue
+        if game_patch:
+            break
         if game in files:
-            global game_patch
-            game_patch = root
-            return True
+                game_patch = os.path.join(root, game)
+                break
 
 if __name__ == '__main__':
     winv()
